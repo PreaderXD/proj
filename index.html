@@ -10,7 +10,104 @@
 <div class="layout"><aside><a class="nav active" href="/">⌂ &nbsp; Home</a></aside><main><section id="home"><h1 class="heading">Videos</h1><div id="videoGrid" class="grid"></div><p id="status" class="empty">Loading videos…</p></section><section id="watch" hidden></section></main></div>
 <script>
 const $=s=>document.querySelector(s);let allVideos=[];
-function playableType(link){try{const u=new URL(link);if(/youtube\.com$|youtube-nocookie\.com$|youtu\.be$/.test(u.hostname)){let id=u.hostname==='youtu.be'?u.pathname.slice(1):u.searchParams.get('v');if(u.pathname.includes('/embed/'))id=u.pathname.split('/embed/')[1].split('/')[0];if(id)return{type:'youtube',id};}if(/\.(mp4|webm|ogg|m4v|mov)(\?|$)/i.test(u.href))return{type:'video'};}catch{}return{type:'link'};}
+function playableType(link) {
+  try {
+    const u = new URL(link);
+    const host = u.hostname.toLowerCase().replace(/^www\./, "");
+    const path = u.pathname;
+
+    // YouTube videos and Shorts
+    if (
+      host === "youtube.com" ||
+      host.endsWith(".youtube.com") ||
+      host === "youtube-nocookie.com" ||
+      host.endsWith(".youtube-nocookie.com") ||
+      host === "youtu.be"
+    ) {
+      let id = "";
+
+      if (host === "youtu.be") {
+        id = path.split("/").filter(Boolean)[0] || "";
+      } else if (u.searchParams.has("v")) {
+        id = u.searchParams.get("v") || "";
+      } else {
+        const match = path.match(
+          /^\/(?:embed|shorts|live)\/([a-zA-Z0-9_-]+)/
+        );
+        if (match) id = match[1];
+      }
+
+      if (id) return { type: "youtube", id };
+    }
+
+    // Direct video files
+    if (/\.(mp4|webm|ogg|ogv|m4v|mov)(?:$)/i.test(path)) {
+      return { type: "video" };
+    }
+
+    // Reddit videos and post embeds
+    if (host === "reddit.com" || host.endsWith(".reddit.com")) {
+      const videoMatch = path.match(/^\/video\/([a-zA-Z0-9_-]+)/);
+
+      if (videoMatch) {
+        return {
+          type: "iframe",
+          src: `https://www.reddit.com/video/${encodeURIComponent(videoMatch[1])}`
+        };
+      }
+
+      if (/\/comments\/[a-zA-Z0-9]+/.test(path)) {
+        const embedUrl = new URL(`https://www.redditmedia.com${path}`);
+        embedUrl.search = u.search;
+        embedUrl.searchParams.set("embed", "true");
+
+        return {
+          type: "iframe",
+          src: embedUrl.href
+        };
+      }
+    }
+
+    // Facebook videos, Watch, Reels, and fb.watch links
+    if (
+      host === "facebook.com" ||
+      host.endsWith(".facebook.com") ||
+      host === "fb.watch"
+    ) {
+      if (
+        host === "fb.watch" ||
+        /\/(?:videos|watch|reel|reels|share\/v|share\/r)\//i.test(path)
+      ) {
+        return {
+          type: "iframe",
+          src:
+            "https://www.facebook.com/plugins/video.php?href=" +
+            encodeURIComponent(u.href) +
+            "&show_text=false"
+        };
+      }
+    }
+
+    // Pornhub videos
+    if (host === "pornhub.com" || host.endsWith(".pornhub.com")) {
+      const videoId =
+        u.searchParams.get("viewkey") ||
+        path.match(/^\/embed\/([a-zA-Z0-9]+)/)?.[1];
+
+      if (videoId) {
+        return {
+          type: "iframe",
+          src: `https://www.pornhub.com/embed/${encodeURIComponent(videoId)}`
+        };
+      }
+    }
+
+    // Generic iframe providers (add providers here as needed)
+    return { type: "link", url: u.href };
+  } catch {
+    return { type: "link", url: link };
+  }
+}
 function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
 function card(v){const b=document.createElement('button');b.className='video-card';b.innerHTML=`<div class="thumb">${esc((v.thumbnail?.text||v.title||'C').slice(0,1).toUpperCase())}</div><div class="meta"><div class="avatar">${esc((v.name||v.title||'C').slice(0,1).toUpperCase())}</div><div><div class="vtitle">${esc(v.title)}</div><div class="sub">${esc(v.name||'')}<br>${esc(v.description||'')}</div></div></div>`;b.addEventListener('click',()=>{location.href='/?watch='+encodeURIComponent(v.id)});return b;}
 function render(){const q=$('#searchInput').value.trim().toLowerCase();const list=allVideos.filter(v=>v.published&&[v.title,v.description,v.name].some(x=>String(x||'').toLowerCase().includes(q)));$('#videoGrid').replaceChildren(...list.map(card));$('#status').hidden=list.length>0;$('#status').textContent=allVideos.length?'No matching videos.':'No published videos yet.';}
