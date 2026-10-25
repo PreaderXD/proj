@@ -1,117 +1,808 @@
-<!doctype html>
+
+<!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Chicken</title>
-<style>
-:root{color-scheme:dark;--bg:#0f0f0f;--panel:#181818;--panel2:#242424;--text:#f5f5f5;--muted:#aaa;--accent:#e6b800}*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:15px Arial,Helvetica,sans-serif}button,input{font:inherit}.top{height:64px;display:flex;align-items:center;gap:20px;padding:0 24px;border-bottom:1px solid #292929;position:sticky;top:0;background:#101010;z-index:2}.brand{font-size:25px;font-weight:800;letter-spacing:-1px;color:var(--text);text-decoration:none}.brand span{color:var(--accent)}.search{display:flex;max-width:650px;flex:1;margin:auto}.search input{flex:1;min-width:0;background:#090909;border:1px solid #383838;border-radius:22px 0 0 22px;padding:12px 18px;color:white;outline:none}.search button,.pill{background:var(--panel2);border:1px solid #393939;color:white;padding:11px 18px;cursor:pointer}.search button{border-radius:0 22px 22px 0}.pill{border-radius:22px;text-decoration:none;white-space:nowrap}.layout{display:grid;grid-template-columns:200px minmax(0,1fr);min-height:calc(100vh - 64px)}aside{padding:20px 12px;border-right:1px solid #292929}.nav{display:block;padding:13px 16px;color:white;text-decoration:none;border-radius:10px}.nav.active,.nav:hover{background:#292929}main{padding:26px;min-width:0}.heading{font-size:24px;margin:0 0 22px}.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(245px,1fr));gap:26px 18px}.video-card{border:0;text-align:left;background:transparent;color:inherit;cursor:pointer;padding:0;min-width:0}.thumb{aspect-ratio:16/9;background:#252525;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:64px;font-weight:800;color:#e5c23d;overflow:hidden}.meta{display:flex;gap:12px;padding-top:12px}.avatar{width:38px;height:38px;border-radius:50%;background:#393939;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-weight:bold}.vtitle{font-size:16px;font-weight:700;line-height:1.35;overflow-wrap:anywhere}.sub{color:var(--muted);font-size:13px;margin-top:7px;white-space:pre-wrap;overflow-wrap:anywhere}.empty{color:var(--muted);padding:40px 0}.watch{max-width:1000px;margin:auto}.player{width:100%;aspect-ratio:16/9;background:#000;border-radius:12px;overflow:hidden;display:flex;align-items:center;justify-content:center}.player iframe,.player video{width:100%;height:100%;border:0}.watch h1{font-size:25px}.description{white-space:pre-wrap;line-height:1.55;color:#ddd}.back{margin-bottom:18px;display:inline-block;color:#ddd;cursor:pointer;background:none;border:0;padding:8px 0}.external{color:#f0ce44} @media(max-width:700px){.top{padding:0 12px;gap:10px}.brand{font-size:21px}.layout{grid-template-columns:1fr}aside{display:none}main{padding:18px 13px}.search{margin:0}.search input{padding:10px}.search button{padding:10px}.pill{padding:9px 11px}.grid{grid-template-columns:repeat(auto-fill,minmax(155px,1fr));gap:20px 12px}.thumb{font-size:46px}.vtitle{font-size:14px}.avatar{width:32px;height:32px}}
-</style></head><body>
-<header class="top"><a class="brand" href="/">Chicken<span>●</span></a><form class="search" id="searchForm"><input id="searchInput" placeholder="Search videos" aria-label="Search videos"><button>Search</button></form><a class="pill" href="/dev.html">Studio</a></header>
-<div class="layout"><aside><a class="nav active" href="/">⌂ &nbsp; Home</a></aside><main><section id="home"><h1 class="heading">Videos</h1><div id="videoGrid" class="grid"></div><p id="status" class="empty">Loading videos…</p></section><section id="watch" hidden></section></main></div>
-<script>
-const $=s=>document.querySelector(s);let allVideos=[];
-function playableType(link) {
-  try {
-    const u = new URL(link);
-    const host = u.hostname.toLowerCase().replace(/^www\./, "");
-    const path = u.pathname;
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#0f0f0f">
+  <title>Chicken</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #0f0f0f;
+      --panel: #181818;
+      --panel-hover: #242424;
+      --text: #f1f1f1;
+      --muted: #aaa;
+      --accent: #ff4545;
+      --border: #303030;
+    }
 
-    // YouTube videos and Shorts
-    if (
-      host === "youtube.com" ||
-      host.endsWith(".youtube.com") ||
-      host === "youtube-nocookie.com" ||
-      host.endsWith(".youtube-nocookie.com") ||
-      host === "youtu.be"
-    ) {
-      let id = "";
+    * {
+      box-sizing: border-box;
+    }
 
-      if (host === "youtu.be") {
-        id = path.split("/").filter(Boolean)[0] || "";
-      } else if (u.searchParams.has("v")) {
-        id = u.searchParams.get("v") || "";
-      } else {
-        const match = path.match(
-          /^\/(?:embed|shorts|live)\/([a-zA-Z0-9_-]+)/
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: Arial, Helvetica, sans-serif;
+    }
+
+    a {
+      color: inherit;
+      text-decoration: none;
+    }
+
+    button, input {
+      font: inherit;
+    }
+
+    button {
+      cursor: pointer;
+    }
+
+    .topbar {
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      min-height: 64px;
+      padding: 10px 5%;
+      background: rgba(15, 15, 15, .97);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      flex-shrink: 0;
+      font-size: 23px;
+      font-weight: 800;
+      letter-spacing: -.8px;
+    }
+
+    .brand-mark {
+      display: grid;
+      width: 34px;
+      height: 34px;
+      place-items: center;
+      border-radius: 11px;
+      background: var(--accent);
+      color: white;
+      font-size: 19px;
+    }
+
+    .search {
+      display: flex;
+      width: min(600px, 100%);
+      margin: 0 auto;
+    }
+
+    .search input {
+      width: 100%;
+      min-width: 0;
+      padding: 12px 16px;
+      color: var(--text);
+      background: #121212;
+      border: 1px solid #383838;
+      border-radius: 24px 0 0 24px;
+      outline: none;
+    }
+
+    .search input:focus {
+      border-color: #777;
+    }
+
+    .search button {
+      padding: 0 19px;
+      color: white;
+      background: #303030;
+      border: 1px solid #383838;
+      border-left: 0;
+      border-radius: 0 24px 24px 0;
+    }
+
+    .main {
+      width: min(1500px, 100%);
+      margin: 0 auto;
+      padding: 28px 5%;
+    }
+
+    .section-heading {
+      margin: 0 0 22px;
+      font-size: 24px;
+    }
+
+    .video-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(245px, 1fr));
+      gap: 28px 18px;
+    }
+
+    .video-card {
+      min-width: 0;
+      cursor: pointer;
+    }
+
+    .thumbnail {
+      display: grid;
+      aspect-ratio: 16 / 9;
+      place-items: center;
+      overflow: hidden;
+      background: linear-gradient(145deg, #292929, #171717);
+      border: 1px solid #303030;
+      border-radius: 12px;
+    }
+
+    .thumbnail-letter {
+      display: grid;
+      width: 66px;
+      height: 66px;
+      place-items: center;
+      border-radius: 50%;
+      background: var(--accent);
+      color: white;
+      font-size: 29px;
+      font-weight: 800;
+    }
+
+    .video-card:hover .thumbnail {
+      border-color: #656565;
+    }
+
+    .video-info {
+      padding: 12px 3px;
+    }
+
+    .video-title {
+      margin: 0 0 8px;
+      font-size: 16px;
+      font-weight: 700;
+      line-height: 1.4;
+      overflow-wrap: anywhere;
+    }
+
+    .video-channel, .video-date {
+      margin: 4px 0;
+      color: var(--muted);
+      font-size: 13px;
+      overflow-wrap: anywhere;
+    }
+
+    .notice {
+      padding: 35px 12px;
+      color: var(--muted);
+      text-align: center;
+    }
+
+    .watch-page {
+      width: min(1050px, 100%);
+      margin: 0 auto;
+    }
+
+    .back-button {
+      margin: 0 0 18px;
+      padding: 10px 15px;
+      color: var(--text);
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+    }
+
+    .player {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 16 / 9;
+      overflow: hidden;
+      background: #000;
+      border-radius: 12px;
+    }
+
+    .player iframe, .player video {
+      display: block;
+      width: 100%;
+      height: 100%;
+      border: 0;
+      background: #000;
+    }
+
+    .player video {
+      object-fit: contain;
+    }
+
+    .watch-title {
+      margin: 20px 0 12px;
+      font-size: clamp(21px, 3vw, 29px);
+      line-height: 1.3;
+      overflow-wrap: anywhere;
+    }
+
+    .watch-channel {
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .description {
+      margin-top: 20px;
+      padding: 18px;
+      background: var(--panel);
+      border-radius: 12px;
+      line-height: 1.6;
+      overflow-wrap: anywhere;
+      white-space: pre-wrap;
+    }
+
+    .external-fallback {
+      display: flex;
+      height: 100%;
+      min-height: 180px;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 15px;
+      padding: 25px;
+      text-align: center;
+    }
+
+    .external-fallback p {
+      margin: 0;
+      color: #ccc;
+      line-height: 1.5;
+    }
+
+    .open-link {
+      display: inline-block;
+      padding: 12px 19px;
+      color: white;
+      background: var(--accent);
+      border-radius: 8px;
+      font-weight: 700;
+      overflow-wrap: anywhere;
+    }
+
+    .error {
+      color: #ff8c8c;
+    }
+
+    @media (max-width: 600px) {
+      .topbar {
+        flex-wrap: wrap;
+        gap: 12px;
+        padding: 12px 4%;
+      }
+
+      .brand {
+        font-size: 21px;
+      }
+
+      .search {
+        order: 2;
+        flex-basis: 100%;
+      }
+
+      .main {
+        padding: 22px 4%;
+      }
+
+      .video-grid {
+        grid-template-columns: repeat(auto-fill, minmax(155px, 1fr));
+        gap: 16px 12px;
+      }
+
+      .thumbnail-letter {
+        width: 52px;
+        height: 52px;
+        font-size: 24px;
+      }
+
+      .video-title {
+        font-size: 14px;
+      }
+
+      .player {
+        border-radius: 7px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="/" aria-label="Chicken home">
+      <span class="brand-mark">C</span>
+      <span>Chicken</span>
+    </a>
+
+    <form class="search" id="searchForm">
+      <input
+        id="searchInput"
+        type="search"
+        placeholder="Search videos"
+        aria-label="Search videos"
+      >
+      <button type="submit" aria-label="Search">Search</button>
+    </form>
+  </header>
+
+  <main class="main">
+    <section id="homePage">
+      <h1 class="section-heading" id="homeHeading">Videos</h1>
+      <div id="videoGrid" class="video-grid">
+        <div class="notice">Loading videos...</div>
+      </div>
+    </section>
+
+    <section id="watchPage" class="watch-page" hidden>
+      <button id="backButton" class="back-button" type="button">
+        ← Back to videos
+      </button>
+
+      <div id="player" class="player"></div>
+      <h1 id="watchTitle" class="watch-title"></h1>
+      <div id="watchChannel" class="watch-channel"></div>
+      <div id="watchDescription" class="description"></div>
+    </section>
+  </main>
+
+  <script>
+    "use strict";
+
+    let videos = [];
+    let currentSearch = "";
+
+    const homePage = document.getElementById("homePage");
+    const watchPage = document.getElementById("watchPage");
+    const videoGrid = document.getElementById("videoGrid");
+    const player = document.getElementById("player");
+
+    function safeText(value) {
+      return value == null ? "" : String(value);
+    }
+
+    function getVideoId(video) {
+      return safeText(video?.id);
+    }
+
+    function getPlayableType(rawUrl) {
+      try {
+        const u = new URL(rawUrl);
+        if (u.protocol !== "https:" && u.protocol !== "http:") {
+          return { type: "link", url: rawUrl };
+        }
+
+        const host = u.hostname.toLowerCase().replace(/^www\./, "");
+        const path = u.pathname;
+
+        // YouTube videos, Shorts, live videos, and youtu.be links.
+        if (
+          host === "youtube.com" ||
+          host.endsWith(".youtube.com") ||
+          host === "youtube-nocookie.com" ||
+          host.endsWith(".youtube-nocookie.com") ||
+          host === "youtu.be"
+        ) {
+          let id = "";
+
+          if (host === "youtu.be") {
+            id = path.split("/").filter(Boolean)[0] || "";
+          } else if (u.searchParams.has("v")) {
+            id = u.searchParams.get("v") || "";
+          } else {
+            const match = path.match(
+              /^\/(?:embed|shorts|live)\/([a-zA-Z0-9_-]+)/
+            );
+            if (match) id = match[1];
+          }
+
+          if (id) {
+            return {
+              type: "iframe",
+              provider: "YouTube",
+              src: "https://www.youtube-nocookie.com/embed/" +
+                encodeURIComponent(id)
+            };
+          }
+        }
+
+        // Direct video files.
+        if (/\.(mp4|webm|ogg|ogv|m4v|mov)(?:$)/i.test(path)) {
+          return { type: "video", src: u.href };
+        }
+
+        // Reddit video links and Reddit post embeds.
+        if (host === "reddit.com" || host.endsWith(".reddit.com")) {
+          const videoMatch = path.match(/^\/video\/([a-zA-Z0-9_-]+)/);
+
+          if (videoMatch) {
+            return {
+              type: "iframe",
+              provider: "Reddit",
+              src: "https://www.reddit.com/video/" +
+                encodeURIComponent(videoMatch[1])
+            };
+          }
+
+          if (/\/comments\/[a-zA-Z0-9]+/i.test(path)) {
+            const redditEmbed = new URL(
+              "https://www.redditmedia.com" + path
+            );
+
+            const postMatch = path.match(
+              /\/comments\/([a-zA-Z0-9]+)/
+            );
+
+            if (postMatch) {
+              redditEmbed.searchParams.set("ref_source", "embed");
+              redditEmbed.searchParams.set("ref", "share");
+              redditEmbed.searchParams.set("embed", "true");
+
+              return {
+                type: "iframe",
+                provider: "Reddit",
+                src: redditEmbed.href
+              };
+            }
+          }
+        }
+
+        // Facebook videos, Watch pages, Reels, and fb.watch links.
+        if (
+          host === "facebook.com" ||
+          host.endsWith(".facebook.com") ||
+          host === "fb.watch"
+        ) {
+          if (
+            host === "fb.watch" ||
+            /\/(?:videos|watch|reel|reels|share\/v|share\/r)\//i.test(path)
+          ) {
+            return {
+              type: "iframe",
+              provider: "Facebook",
+              src: "https://www.facebook.com/plugins/video.php?href=" +
+                encodeURIComponent(u.href) +
+                "&show_text=false"
+            };
+          }
+        }
+
+        // Pornhub videos.
+        if (host === "pornhub.com" || host.endsWith(".pornhub.com")) {
+          const videoId =
+            u.searchParams.get("viewkey") ||
+            path.match(/^\/embed\/([a-zA-Z0-9]+)/)?.[1];
+
+          if (videoId) {
+            return {
+              type: "iframe",
+              provider: "Pornhub",
+              src: "https://www.pornhub.com/embed/" +
+                encodeURIComponent(videoId)
+            };
+          }
+        }
+
+        // Generic video host: preserve the URL and provide an external link.
+        return { type: "link", url: u.href };
+      } catch {
+        return { type: "link", url: rawUrl };
+      }
+    }
+
+    function makeElement(tag, className, text) {
+      const element = document.createElement(tag);
+      if (className) element.className = className;
+      if (text !== undefined) element.textContent = text;
+      return element;
+    }
+
+    function formatDate(value) {
+      if (!value) return "";
+
+      const date = new Date(value);
+      if (Number.isNaN(date.getTime())) return "";
+
+      return date.toLocaleDateString(undefined, {
+        year: "numeric",
+        month: "short",
+        day: "numeric"
+      });
+    }
+
+    function getInitial(video) {
+      const thumbnailText = video?.thumbnail?.text;
+      if (thumbnailText) return safeText(thumbnailText).slice(0, 2).toUpperCase();
+
+      return safeText(video?.title).trim().charAt(0).toUpperCase() || "C";
+    }
+
+    function renderVideos() {
+      videoGrid.replaceChildren();
+
+      const filtered = videos.filter(video => {
+        if (video.published === false) return false;
+
+        const query = currentSearch.trim().toLowerCase();
+        if (!query) return true;
+
+        return [
+          video.title,
+          video.description,
+          video.name
+        ].some(value => safeText(value).toLowerCase().includes(query));
+      });
+
+      if (!filtered.length) {
+        videoGrid.appendChild(
+          makeElement(
+            "div",
+            "notice",
+            currentSearch
+              ? "No videos matched your search."
+              : "No published videos yet."
+          )
         );
-        if (match) id = match[1];
+        return;
       }
 
-      if (id) return { type: "youtube", id };
-    }
+      for (const video of filtered) {
+        const card = makeElement("article", "video-card");
+        card.tabIndex = 0;
+        card.setAttribute("role", "link");
+        card.setAttribute(
+          "aria-label",
+          "Watch " + safeText(video.title || "video")
+        );
 
-    // Direct video files
-    if (/\.(mp4|webm|ogg|ogv|m4v|mov)(?:$)/i.test(path)) {
-      return { type: "video" };
-    }
+        const thumbnail = makeElement("div", "thumbnail");
+        const letter = makeElement("div", "thumbnail-letter", getInitial(video));
+        thumbnail.appendChild(letter);
 
-    // Reddit videos and post embeds
-    if (host === "reddit.com" || host.endsWith(".reddit.com")) {
-      const videoMatch = path.match(/^\/video\/([a-zA-Z0-9_-]+)/);
+        const info = makeElement("div", "video-info");
+        info.appendChild(
+          makeElement("h2", "video-title", video.title || "Untitled video")
+        );
+        info.appendChild(
+          makeElement("p", "video-channel", video.name || "Unknown creator")
+        );
 
-      if (videoMatch) {
-        return {
-          type: "iframe",
-          src: `https://www.reddit.com/video/${encodeURIComponent(videoMatch[1])}`
-        };
-      }
+        const date = formatDate(video.createdAt || video.created_at);
+        if (date) info.appendChild(makeElement("p", "video-date", date));
 
-      if (/\/comments\/[a-zA-Z0-9]+/.test(path)) {
-        const embedUrl = new URL(`https://www.redditmedia.com${path}`);
-        embedUrl.search = u.search;
-        embedUrl.searchParams.set("embed", "true");
+        card.append(thumbnail, info);
 
-        return {
-          type: "iframe",
-          src: embedUrl.href
-        };
-      }
-    }
+        const open = () => openWatchPage(getVideoId(video));
+        card.addEventListener("click", open);
+        card.addEventListener("keydown", event => {
+          if (event.key === "Enter" || event.key === " ") {
+            event.preventDefault();
+            open();
+          }
+        });
 
-    // Facebook videos, Watch, Reels, and fb.watch links
-    if (
-      host === "facebook.com" ||
-      host.endsWith(".facebook.com") ||
-      host === "fb.watch"
-    ) {
-      if (
-        host === "fb.watch" ||
-        /\/(?:videos|watch|reel|reels|share\/v|share\/r)\//i.test(path)
-      ) {
-        return {
-          type: "iframe",
-          src:
-            "https://www.facebook.com/plugins/video.php?href=" +
-            encodeURIComponent(u.href) +
-            "&show_text=false"
-        };
+        videoGrid.appendChild(card);
       }
     }
 
-    // Pornhub videos
-    if (host === "pornhub.com" || host.endsWith(".pornhub.com")) {
-      const videoId =
-        u.searchParams.get("viewkey") ||
-        path.match(/^\/embed\/([a-zA-Z0-9]+)/)?.[1];
+    function showExternalFallback(url, providerName) {
+      player.replaceChildren();
 
-      if (videoId) {
-        return {
-          type: "iframe",
-          src: `https://www.pornhub.com/embed/${encodeURIComponent(videoId)}`
-        };
+      const box = makeElement("div", "external-fallback");
+      box.appendChild(
+        makeElement(
+          "p",
+          "",
+          providerName
+            ? providerName + " may block playback in embedded players."
+            : "This link does not provide an embeddable video player."
+        )
+      );
+
+      const link = makeElement("a", "open-link", "Open video on its website");
+      link.href = url;
+      link.target = "_blank";
+      link.rel = "noopener noreferrer";
+
+      box.appendChild(link);
+      player.appendChild(box);
+    }
+
+    function renderVideoPlayer(video) {
+      player.replaceChildren();
+
+      const rawUrl = safeText(video.link || video.url).trim();
+
+      if (!rawUrl) {
+        player.appendChild(
+          makeElement("div", "external-fallback", "This video has no link.")
+        );
+        return;
+      }
+
+      const playable = getPlayableType(rawUrl);
+
+      if (playable.type === "video") {
+        const media = document.createElement("video");
+        media.src = playable.src;
+        media.controls = true;
+        media.autoplay = false;
+        media.playsInline = true;
+        media.preload = "metadata";
+        media.onerror = () => showExternalFallback(rawUrl, "");
+        player.appendChild(media);
+        return;
+      }
+
+      if (playable.type === "iframe") {
+        const iframe = document.createElement("iframe");
+
+        iframe.src = playable.src;
+        iframe.title = (playable.provider || "Video") + " player";
+        iframe.allow =
+          "autoplay; encrypted-media; picture-in-picture; fullscreen; clipboard-write";
+        iframe.allowFullscreen = true;
+        iframe.referrerPolicy = "strict-origin-when-cross-origin";
+        iframe.loading = "eager";
+
+        player.appendChild(iframe);
+
+        // Cross-origin providers do not let this page reliably detect
+        // blocked playback. Keep an explicit external fallback available.
+        const fallback = makeElement("div", "external-fallback");
+        fallback.style.position = "absolute";
+        fallback.style.right = "8px";
+        fallback.style.bottom = "8px";
+        fallback.style.width = "auto";
+        fallback.style.minHeight = "0";
+        fallback.style.padding = "0";
+
+        const link = makeElement("a", "open-link", "Open on website");
+        link.href = rawUrl;
+        link.target = "_blank";
+        link.rel = "noopener noreferrer";
+        link.style.fontSize = "12px";
+        link.style.padding = "8px 10px";
+
+        fallback.appendChild(link);
+        player.appendChild(fallback);
+        return;
+      }
+
+      showExternalFallback(
+        playable.url || rawUrl,
+        playable.provider || ""
+      );
+    }
+
+    function openWatchPage(id) {
+      const video = videos.find(item => getVideoId(item) === id);
+
+      if (!video) {
+        homePage.hidden = false;
+        watchPage.hidden = true;
+        videoGrid.replaceChildren(
+          makeElement("div", "notice error", "Video not found. It may have been removed or unpublished.")
+        );
+        history.replaceState({}, "", "/");
+        return;
+      }
+
+      homePage.hidden = true;
+      watchPage.hidden = false;
+
+      document.getElementById("watchTitle").textContent =
+        video.title || "Untitled video";
+
+      document.getElementById("watchChannel").textContent =
+        video.name || "Unknown creator";
+
+      document.getElementById("watchDescription").textContent =
+        video.description || "No description provided.";
+
+      renderVideoPlayer(video);
+      document.title = (video.title || "Watch video") + " - Chicken";
+      window.scrollTo({ top: 0, behavior: "instant" });
+    }
+
+    function showHome() {
+      watchPage.hidden = true;
+      homePage.hidden = false;
+      document.title = "Chicken";
+      history.pushState({}, "", "/");
+      renderVideos();
+    }
+
+    async function loadVideos() {
+      try {
+        const response = await fetch("/api/videos", {
+          headers: { "Accept": "application/json" },
+          cache: "no-store"
+        });
+
+        if (!response.ok) {
+          throw new Error("Video API returned HTTP " + response.status);
+        }
+
+        const data = await response.json();
+
+        // Accept either an array or a common { videos: [...] } response.
+        videos = Array.isArray(data)
+          ? data
+          : Array.isArray(data.videos)
+            ? data.videos
+            : [];
+
+        renderVideos();
+
+        const watchId = new URLSearchParams(location.search).get("watch");
+        if (watchId) {
+          openWatchPage(watchId);
+        }
+      } catch (error) {
+        console.error("Could not load Chicken videos:", error);
+
+        videoGrid.replaceChildren(
+          makeElement(
+            "div",
+            "notice error",
+            "Could not load videos. Check that /api/videos is working."
+          )
+        );
       }
     }
 
-    // Generic iframe providers (add providers here as needed)
-    return { type: "link", url: u.href };
-  } catch {
-    return { type: "link", url: link };
-  }
-}
-function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
-function card(v){const b=document.createElement('button');b.className='video-card';b.innerHTML=`<div class="thumb">${esc((v.thumbnail?.text||v.title||'C').slice(0,1).toUpperCase())}</div><div class="meta"><div class="avatar">${esc((v.name||v.title||'C').slice(0,1).toUpperCase())}</div><div><div class="vtitle">${esc(v.title)}</div><div class="sub">${esc(v.name||'')}<br>${esc(v.description||'')}</div></div></div>`;b.addEventListener('click',()=>{location.href='/?watch='+encodeURIComponent(v.id)});return b;}
-function render(){const q=$('#searchInput').value.trim().toLowerCase();const list=allVideos.filter(v=>v.published&&[v.title,v.description,v.name].some(x=>String(x||'').toLowerCase().includes(q)));$('#videoGrid').replaceChildren(...list.map(card));$('#status').hidden=list.length>0;$('#status').textContent=allVideos.length?'No matching videos.':'No published videos yet.';}
-function renderWatch(v){$('#home').hidden=true;const s=$('#watch');s.hidden=false;const p=playableType(v.link);let player='';if(p.type==='youtube')player=`<iframe src="https://www.youtube-nocookie.com/embed/${encodeURIComponent(p.id)}?autoplay=1&rel=0" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen title="${esc(v.title)}"></iframe>`;else if(p.type==='video')player=`<video controls autoplay playsinline src="${esc(v.link)}"></video>`;else player=`<div style="padding:20px;text-align:center">This link may not support embedded playback.<br><a class="external" target="_blank" rel="noopener noreferrer" href="${esc(v.link)}">Open video link</a></div>`;s.innerHTML=`<button class="back" onclick="location.href='/'">← Back to videos</button><div class="watch"><div class="player">${player}</div><h1>${esc(v.title)}</h1><div class="sub">${esc(v.name||'')}</div><p class="description">${esc(v.description||'')}</p></div>`;}
-async function load(){try{const r=await fetch('/api/videos',{cache:'no-store'});if(!r.ok)throw Error('API '+r.status);const d=await r.json();allVideos=Array.isArray(d.videos)?d.videos:[];const id=new URLSearchParams(location.search).get('watch');if(id){const v=allVideos.find(x=>x.id===id&&x.published);if(v)renderWatch(v);else{$('#status').textContent='Video not found or not published.';$('#status').hidden=false;}}else render();}catch(e){$('#status').hidden=false;$('#status').textContent='Could not load videos. Check the Vercel API and database configuration.';}}
-$('#searchForm').addEventListener('submit',e=>{e.preventDefault();render()});$('#searchInput').addEventListener('input',render);load();setInterval(()=>{if(!new URLSearchParams(location.search).has('watch'))load()},15000);
-</script></body></html>
+    document.getElementById("searchForm").addEventListener("submit", event => {
+      event.preventDefault();
+      currentSearch = document.getElementById("searchInput").value;
+      renderVideos();
+    });
+
+    document.getElementById("searchInput").addEventListener("input", event => {
+      currentSearch = event.target.value;
+      renderVideos();
+    });
+
+    document.getElementById("backButton").addEventListener("click", showHome);
+
+    window.addEventListener("popstate", () => {
+      const watchId = new URLSearchParams(location.search).get("watch");
+
+      if (watchId) {
+        openWatchPage(watchId);
+      } else {
+        watchPage.hidden = true;
+        homePage.hidden = false;
+        document.title = "Chicken";
+        renderVideos();
+      }
+    });
+
+    loadVideos();
+
+    // Refresh the video list without forcing a reload of an open player.
+    setInterval(async () => {
+      try {
+        const response = await fetch("/api/videos", {
+          headers: { "Accept": "application/json" },
+          cache: "no-store"
+        });
+
+        if (!response.ok) return;
+
+        const data = await response.json();
+        videos = Array.isArray(data)
+          ? data
+          : Array.isArray(data.videos)
+            ? data.videos
+            : [];
+
+        if (watchPage.hidden) renderVideos();
+      } catch (error) {
+        console.warn("Chicken background refresh failed:", error);
+      }
+    }, 15000);
+  </script>
+</body>
+</html>
